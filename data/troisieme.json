@@ -54,7 +54,7 @@
           "id": "service_ecosystems",
           "titre": "Écosystèmes Modernes & Résilience",
           "fiche": "Architecture des services au sein d'écosystèmes complexes (Cloud hybride, Multi-fournisseurs, IA intégrée). Concepts clés : Résilience opérationnelle, automatisation outrancière (AIOps), et continuité adaptative des services en flux tendu.",
-          "conseil_strategique": "Si une question porte sur l'orchestration de plusieurs clouds ou l'intégration d'agents d'intelligence artificielle dans le support, l'angle d'attaque ITIL 5 est toujours la 'Résilience de l'Écosystème de Service'.",
+          "conseil_strategique": "Si une question porte sur l'orchestration de plusieurs clouds ou l'intégration d'agents d'intelligence artificielle dans le support, l'angle d'attaque ITIL 5 is toujours la 'Résilience de l'Écosystème de Service'.",
           "quiz": [
             {
               "id": "itil5_s1",
