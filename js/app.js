@@ -1,4 +1,7 @@
-// --- APPLICATION DE RÉVISION ADAPTATIVE ITIL 4 ---
+/**
+ * --- ORCHESTRATEUR PRINCIPAL ITIL 5 ---
+ * Gère le routage virtuel, le chargement JSON sécurisé et les scores.
+ */
 import { 
     updateNiveauAdaptatif, 
     selectionnerQuestionsAdaptatives, 
@@ -8,9 +11,19 @@ import {
 
 const AppState = {
     data: null,
-    profile: { username: "Professionnel IT", avatar: "👨‍💻", streak: 0 },
-    progress: {},
-    currentQuiz: { chapitreId: null, questions: [], currentIndex: 0, score: 0, modeInfini: false }
+    profile: {
+        username: "Expert ITIL 5",
+        avatar: "👨‍💻",
+        streak: 5
+    },
+    progress: {}, 
+    currentQuiz: {
+        chapitreId: null,
+        questions: [],
+        currentIndex: 0,
+        score: 0,
+        modeInfini: false
+    }
 };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -20,26 +33,44 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function initLocalStorage() {
-    if (localStorage.getItem("itil_profile")) AppState.profile = JSON.parse(localStorage.getItem("itil_profile"));
-    if (localStorage.getItem("itil_progress")) AppState.progress = JSON.parse(localStorage.getItem("itil_progress"));
+    if (localStorage.getItem("itil_profile")) {
+        AppState.profile = JSON.parse(localStorage.getItem("itil_profile"));
+    } else {
+        localStorage.setItem("itil_profile", JSON.stringify(AppState.profile));
+    }
+
+    if (localStorage.getItem("itil_progress")) {
+        AppState.progress = JSON.parse(localStorage.getItem("itil_progress"));
+    }
     renderProfileUI();
 }
 
 async function loadPedagogicalData() {
     try {
-        const response = await fetch('data/troisieme.json');
-        if (!response.ok) throw new Error("Fichier introuvable");
+        // Chemin relatif explicite sécurisé pour contrer l'erreur 404 de GitHub Pages
+        const response = await fetch('./data/troisieme.json');
+        if (!response.ok) throw new Error("Fichier JSON introuvable ou corrompu.");
         AppState.data = await response.json();
         
         AppState.data.matieres.forEach(mat => {
             mat.chapitres.forEach(chap => {
-                if (!AppState.progress[chap.id]) AppState.progress[chap.id] = "a_reviser";
+                if (!AppState.progress[chap.id]) {
+                    AppState.progress[chap.id] = "a_reviser";
+                }
             });
         });
+        localStorage.setItem("itil_progress", JSON.stringify(AppState.progress));
+
     } catch (error) {
-        console.error("Erreur de chargement.", error);
-        AppState.data = { matieres: [] };
+        console.error("Erreur de chargement pédagogique :", error);
+        document.getElementById("app-view-container").innerHTML = `
+            <div style="color:var(--color-danger); text-align:center; padding:20px;">
+                ⚠️ Impossible de charger la base de données ITIL 5. Vérifiez la casse de votre dossier (data/).
+            </div>
+        `;
+        return;
     }
+
     buildNavigationMenu();
     renderDashboardHome();
     updateGlobalProgressRing();
@@ -48,62 +79,98 @@ async function loadPedagogicalData() {
 function buildNavigationMenu() {
     const menu = document.getElementById("sidebar-menu");
     if (!menu) return;
+
     menu.innerHTML = `
-        <li><a class="nav-item active" id="btn-home"><span>🏠</span><span>Syllabus Global</span></a></li>
-        <li><a class="nav-item" id="btn-infini" style="background: linear-gradient(135deg, #06b6d4, #1e3a8a); color: white; border-radius: 6px; font-weight: bold; margin-top: 10px;"><span>🔥</span><span>EXAMEN BLANC</span></a></li>
+        <li>
+            <a class="nav-item active" id="btn-home">
+                <span>🏠</span><span>Vue d'ensemble</span>
+            </a>
+        </li>
+        <li>
+            <a class="nav-item" id="btn-infini" style="background: linear-gradient(135deg, var(--color-accent), var(--color-primary)); color: white; margin-top: 12px; border-radius:8px;">
+                <span>🔥</span><span>EXAMEN BLANC</span>
+            </a>
+        </li>
     `;
-    
-    document.getElementById("btn-home").addEventListener("click", () => {
-        document.querySelectorAll(".nav-item").forEach(el => el.classList.remove("active"));
-        document.getElementById("btn-home").classList.add("active");
+
+    document.getElementById("btn-home").addEventListener("click", (e) => {
+        switchActiveNavItem(e.currentTarget);
         renderDashboardHome();
     });
+
     document.getElementById("btn-infini").addEventListener("click", startQuizInfini);
-    
+
     AppState.data.matieres.forEach(mat => {
         const li = document.createElement("li");
-        li.innerHTML = `<a class="nav-item"><span>${mat.emoji}</span><span>${mat.label}</span></a>`;
+        li.innerHTML = `
+            <a class="nav-item" data-id="${mat.id}">
+                <span>${mat.emoji}</span><span>${mat.label}</span>
+            </a>
+        `;
         li.querySelector("a").addEventListener("click", (e) => {
-            document.querySelectorAll(".nav-item").forEach(el => el.classList.remove("active"));
-            e.currentTarget.classList.add("active");
+            switchActiveNavItem(e.currentTarget);
             renderMatiereView(mat.id);
         });
         menu.appendChild(li);
     });
 }
 
+function switchActiveNavItem(targetElement) {
+    document.querySelectorAll(".nav-item").forEach(el => el.classList.remove("active"));
+    targetElement.classList.add("active");
+}
+
 function renderDashboardHome() {
     const container = document.getElementById("app-view-container");
+    
+    const piegeAlerte = AppState.data.pieges_classiques 
+        ? AppState.data.pieges_classiques[Math.floor(Math.random() * AppState.data.pieges_classiques.length)]
+        : "Restez concentrés sur le glossaire officiel ITIL 5.";
+
     container.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2>Domaines d'Examen</h2>
-            <button id="main-infini-btn" class="btn-primary">🚀 Grand Test Aléatoire</button>
-        </div>
-        ${AppState.data.pieges_classiques ? `
-            <div style="background: #fff7ed; border-left: 4px solid #f97316; padding: 14px; border-radius: 8px; margin-bottom: 20px; font-size: 0.9rem; color: #7c2d12;">
-                <strong>⚠️ Alerte Piège de l'Examen :</strong> ${AppState.data.pieges_classiques[Math.floor(Math.random() * AppState.data.pieges_classiques.length)]}
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap:wrap; gap:12px;">
+            <div>
+                <h2>Piliers de Certification ITIL 5</h2>
+                <p style="color: var(--text-secondary); font-size:0.9rem;">Sélectionnez une discipline pour lancer l'apprentissage adaptatif.</p>
             </div>
-        ` : ''}
+            <button id="main-infini-btn" class="btn-primary">🚀 Examen Aléatoire Complet</button>
+        </div>
+        
+        <div style="background: rgba(245, 158, 11, 0.1); border-left: 4px solid var(--color-warning); padding: 16px; border-radius: 8px; margin-bottom: 28px; font-size: 0.9rem; color: var(--text-primary); line-height:1.4;">
+            <strong>⚠️ Piège Examen ITIL 5 :</strong> ${piegeAlerte}
+        </div>
+
         <div class="matieres-grid" id="matieres-grid"></div>
     `;
-    
+
     document.getElementById("main-infini-btn").addEventListener("click", startQuizInfini);
+
     const grid = document.getElementById("matieres-grid");
-    
     AppState.data.matieres.forEach(mat => {
-        const total = mat.chapitres?.length || 0;
-        const acquis = mat.chapitres?.filter(c => AppState.progress[c.id] === "acquis").length || 0;
-        const pct = total > 0 ? Math.round((acquis / total) * 100) : 0;
+        const totalModules = mat.chapitres?.length || 0;
+        const modulesAcquis = mat.chapitres?.filter(c => AppState.progress[c.id] === "acquis").length || 0;
+        const pourcentage = totalModules > 0 ? Math.round((modulesAcquis / totalModules) * 100) : 0;
 
         const card = document.createElement("div");
         card.className = "card";
         card.style.borderLeft = `5px solid ${mat.couleur}`;
         card.innerHTML = `
-            <h3>${mat.emoji} ${mat.label}</h3>
-            <p style="font-size:0.85rem; color:var(--text-secondary); margin: 8px 0 16px;">${total} module(s) d'évaluation</p>
-            <div style="background:#E2E8F0; height:6px; border-radius:3px; overflow:hidden;"><div style="background:var(--color-primary); width:${pct}%; height:100%;"></div></div>
+            <h3 style="margin-bottom: 6px;">${mat.emoji} ${mat.label}</h3>
+            <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom: 16px;">${totalModules} module(s) d'évaluation</p>
+            <div style="margin-top:auto;">
+                <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:4px; font-weight:600;">
+                    <span>Niveau de Maîtrise</span><span>${pourcentage}%</span>
+                </div>
+                <div style="background:var(--border-color); height:6px; border-radius:3px; overflow:hidden;">
+                    <div style="background:${mat.couleur}; width:${pourcentage}%; height:100%; transition: width 0.4s ease;"></div>
+                </div>
+            </div>
         `;
-        card.addEventListener("click", () => renderMatiereView(mat.id));
+        card.addEventListener("click", () => {
+            const navLink = document.querySelector(`.nav-item[data-id="${mat.id}"]`);
+            if(navLink) switchActiveNavItem(navLink);
+            renderMatiereView(mat.id);
+        });
         grid.appendChild(card);
     });
 }
@@ -111,34 +178,48 @@ function renderDashboardHome() {
 function renderMatiereView(matId) {
     const mat = AppState.data.matieres.find(m => m.id === matId);
     if (!mat) return;
-    
+
     const container = document.getElementById("app-view-container");
     container.innerHTML = `
         <div style="margin-bottom:24px;">
-            <button id="back-btn" class="btn-primary" style="padding:6px 12px;">← Retour</button>
-            <h2 style="margin-top:16px;">${mat.emoji} ${mat.label}</h2>
+            <button id="back-btn" class="btn-primary" style="padding:8px 16px; font-size:0.85rem;">← Retour</button>
+            <h2 style="margin-top:20px; display:flex; align-items:center; gap:10px;">
+                <span>${mat.emoji}</span> <span>${mat.label}</span>
+            </h2>
         </div>
         <div class="chapitres-list"></div>
     `;
-    document.getElementById("back-btn").addEventListener("click", renderDashboardHome);
+    document.getElementById("back-btn").addEventListener("click", () => {
+        const homeBtn = document.getElementById("btn-home");
+        if(homeBtn) switchActiveNavItem(homeBtn);
+        renderDashboardHome();
+    });
 
     const list = container.querySelector(".chapitres-list");
     mat.chapitres.forEach(chapitre => {
-        const stat = AppState.progress[chapitre.id] || "a_reviser";
-        const currentNiveau = getNiveauActuel(chapitre.id);
-        
+        const statut = AppState.progress[chapitre.id] || "a_reviser";
+        const niveauAdaptatif = getNiveauActuel(chapitre.id);
+
         const card = document.createElement("div");
         card.className = "card";
         card.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                <span class="status-badge status-${stat}">${stat === "acquis" ? "🟢 Maîtrisé" : "⚪ À bosser"}</span>
-                <span style="font-size:0.8rem; padding:2px 8px; background:#ecfeff; color:#0891b2; border-radius:12px; font-weight:bold;">Niveau Adaptatif : ${currentNiveau}/3</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+                <span class="status-badge status-${statut}">
+                    ${statut === "acquis" ? "🟢 Validé" : "⚪ À travailler"}
+                </span>
+                <span style="font-size:0.75rem; padding:4px 10px; background:rgba(6, 182, 212, 0.1); color:var(--color-accent); border-radius:12px; font-weight:700;">
+                    Palier IA : ${niveauAdaptatif}/3
+                </span>
             </div>
-            <h4>${chapitre.titre}</h4>
-            <p style="font-size:0.85rem; color:var(--text-secondary); margin-top:8px; line-height:1.4;">${chapitre.fiche}</p>
-            <p style="font-size:0.8rem; color:#0f766e; background:#f0fdfa; padding:8px; border-radius:6px; margin-top:10px;">💡 <strong>Astuce :</strong> ${chapitre.conseil_strategique}</p>
-            <div style="margin-top:16px;">
-                <button class="btn-quiz btn-primary" style="font-size:0.85rem;">🎯 Lancer l'Évaluation Évolutive</button>
+            <h4 style="font-size:1.05rem; margin-bottom:8px;">${chapitre.titre}</h4>
+            <p style="font-size:0.85rem; color:var(--text-secondary); line-height:1.4; margin-bottom:12px;">${chapitre.fiche}</p>
+            
+            <div style="font-size:0.8rem; color:#0F766E; background:rgba(16, 185, 129, 0.08); padding:10px; border-radius:6px; margin-bottom:18px; border-left:3px solid var(--color-success)">
+                💡 <strong>Stratégie Examen :</strong> ${chapitre.conseil_strategique}
+            </div>
+            
+            <div style="margin-top:auto;">
+                <button class="btn-quiz btn-primary" style="width:100%; font-size:0.85rem; padding:10px;">🎯 Lancer le Test Évolutif</button>
             </div>
         `;
         card.querySelector(".btn-quiz").addEventListener("click", () => startQuizAdaptatif(chapitre));
@@ -147,128 +228,177 @@ function renderMatiereView(matId) {
 }
 
 function startQuizAdaptatif(chapitre) {
-    if (!chapitre.quiz || chapitre.quiz.length === 0) return alert("Aucun QCM dispo.");
-    const questionsFiltrees = selectionnerQuestionsAdaptatives(chapitre.quiz, chapitre.id, 5);
+    if (!chapitre.quiz || chapitre.quiz.length === 0) return alert("Aucun QCM disponible.");
     
-    AppState.currentQuiz = { chapitreId: chapitre.id, questions: questionsFiltrees, currentIndex: 0, score: 0, modeInfini: false };
+    const questionsSelectionnees = selectionnerQuestionsAdaptatives(chapitre.quiz, chapitre.id, 5);
+
+    AppState.currentQuiz = {
+        chapitreId: .chapitre.id,
+        questions: questionsSelectionnees,
+        currentIndex: 0,
+        score: 0,
+        modeInfini: false
+    };
+
     showQuestion();
     document.getElementById("quiz-modal").classList.add("active");
 }
 
 function startQuizInfini() {
-    let toutesLesQuestions = [];
-    AppState.data.matieres.forEach(m => { m.chapitres.forEach(c => { if (c.quiz) toutesLesQuestions = toutesLesQuestions.concat(c.quiz); }); });
-    if(toutesLesQuestions.length === 0) return alert("Pas de banque de questions.");
-    
-    AppState.currentQuiz = { chapitreId: "global_infini", questions: toutesLesQuestions.sort(() => Math.random() - 0.5), currentIndex: 0, score: 0, modeInfini: true };
+    let banqueGlobale = [];
+    AppState.data.matieres.forEach(m => {
+        m.chapitres.forEach(c => {
+            if (c.quiz) banqueGlobale = banqueGlobale.concat(c.quiz);
+        });
+    });
+
+    if (banqueGlobale.length === 0) return alert("Aucune question globale disponible.");
+
+    AppState.currentQuiz = {
+        chapitreId: "global_examen_blanc",
+        questions: banqueGlobale.sort(() => Math.random() - 0.5),
+        currentIndex: 0,
+        score: 0,
+        modeInfini: true
+    };
+
     showQuestion();
     document.getElementById("quiz-modal").classList.add("active");
 }
 
 function showQuestion() {
-    const q = AppState.currentQuiz.questions[AppState.currentQuiz.currentIndex];
-    const infoNiveau = getNiveauActuel(AppState.currentQuiz.chapitreId);
-    
-    document.getElementById("quiz-progress").innerHTML = AppState.currentQuiz.modeInfini 
-        ? `🔥 Mode Examen Blanc Global — Score actuel : ${AppState.currentQuiz.score}`
-        : `Niveau ${q.difficulte || infoNiveau}/3 — Objectif Q. ${AppState.currentQuiz.currentIndex + 1}/${AppState.currentQuiz.questions.length}<br><small style="color:var(--text-secondary); font-weight:normal;">${getMessageMotivation(q.difficulte || infoNiveau)}</small>`;
-        
-    document.getElementById("quiz-question-text").innerHTML = q.enonce;
-    if(q.annale) document.getElementById("quiz-question-text").innerHTML += `<br><span style="display:inline-block; margin-top:8px; font-size:0.75rem; background:var(--bg-app); padding:2px 6px; border-radius:4px;">📋 Type examen : ${q.annale}</span>`;
+    const quiz = AppState.currentQuiz;
+    const q = quiz.questions[quiz.currentIndex];
+    const niveauChapitre = getNiveauActuel(quiz.chapitreId);
 
-    document.getElementById("quiz-explanation").classList.add("hidden");
-    document.getElementById("quiz-next-btn").classList.add("hidden");
+    const progressHeader = document.getElementById("quiz-progress");
+    const questionText = document.getElementById("quiz-question-text");
+    const optionsContainer = document.getElementById("quiz-options-container");
+    const explanationBox = document.getElementById("quiz-explanation");
+    const nextBtn = document.getElementById("quiz-next-btn");
 
-    const container = document.getElementById("quiz-options-container");
-    container.innerHTML = "";
-    
-    q.options.forEach((opt, idx) => {
+    if (quiz.modeInfini) {
+        progressHeader.innerHTML = `🔥 Examen Blanc Complet — ${quiz.currentIndex + 1}/${quiz.questions.length} | Note : ${quiz.score}/${quiz.currentIndex}`;
+    } else {
+        progressHeader.innerHTML = `
+            Difficulté : ${q.difficulte || niveauChapitre}/3 — Q. ${quiz.currentIndex + 1}/${quiz.questions.length}
+            <br><small style="color:var(--text-secondary); font-weight:normal; font-size:0.75rem;">${getMessageMotivation(q.difficulte || niveauChapitre)}</small>
+        `;
+    }
+
+    questionText.innerHTML = q.enonce;
+    if (q.annale) {
+        questionText.innerHTML += `<br><span style="display:inline-block; margin-top:8px; font-size:0.75rem; background:var(--bg-app); border:1px solid var(--border-color); padding:3px 8px; border-radius:4px; font-weight:500; color:var(--text-secondary);">📋 Référentiel : ${q.annale}</span>`;
+    }
+
+    explanationBox.classList.add("hidden");
+    nextBtn.classList.add("hidden");
+    optionsContainer.innerHTML = "";
+
+    q.options.forEach((optionText, index) => {
         const btn = document.createElement("button");
         btn.className = "btn-option";
-        btn.innerText = opt;
-        
+        btn.innerText = optionText;
+
         btn.addEventListener("click", () => {
-            Array.from(container.children).forEach(b => b.disabled = true);
-            const isCorrect = (idx === q.bonne_reponse);
-            
-            if (isCorrect) { 
-                btn.style.background = "#D1FAE5"; btn.style.borderColor = "#10B981"; btn.style.color = "#064E3B";
-                AppState.currentQuiz.score++; 
-            } else { 
-                btn.style.background = "#FEE2E2"; btn.style.borderColor = "#EF4444"; btn.style.color = "#7F1D1D";
-                container.children[q.bonne_reponse].style.background = "#D1FAE5";
-                container.children[q.bonne_reponse].style.borderColor = "#10B981";
-                container.children[q.bonne_reponse].style.color = "#064E3B";
+            Array.from(optionsContainer.children).forEach(button => button.disabled = true);
+
+            const isCorrect = (index === q.bonne_reponse);
+
+            if (isCorrect) {
+                btn.style.background = "#D1FAE5";
+                btn.style.borderColor = "var(--color-success)";
+                btn.style.color = "#064E3B";
+                quiz.score++;
+            } else {
+                btn.style.background = "#FEE2E2";
+                btn.style.borderColor = "var(--color-danger)";
+                btn.style.color = "#7F1D1D";
+                
+                const correctBtn = optionsContainer.children[q.bonne_reponse];
+                correctBtn.style.background = "#D1FAE5";
+                correctBtn.style.borderColor = "var(--color-success)";
+                correctBtn.style.color = "#064E3B";
             }
-            
-            if(!AppState.currentQuiz.modeInfini) {
-                const action = updateNiveauAdaptatif(AppState.currentQuiz.chapitreId, isCorrect);
-                if(action.montee) showToast("🚀 Bravo ! Tu passes au palier supérieur !");
-                if(action.descente) showToast("📉 Consolidation nécessaire sur cette thématique.");
+
+            if (!quiz.modeInfini) {
+                updateNiveauAdaptatif(quiz.chapitreId, isCorrect);
             }
-            
+
             document.getElementById("explanation-text").innerText = q.explication;
-            document.getElementById("quiz-explanation").classList.remove("hidden");
-            document.getElementById("quiz-next-btn").classList.remove("hidden");
+            explanationBox.classList.remove("hidden");
+            nextBtn.classList.remove("hidden");
+            
+            document.querySelector(".modal-content").scrollTo({ top: explanationBox.offsetTop, behavior: 'smooth' });
         });
-        container.appendChild(btn);
+
+        optionsContainer.appendChild(btn);
     });
 }
 
 document.getElementById("quiz-next-btn").addEventListener("click", () => {
-    AppState.currentQuiz.currentIndex++;
-    if (AppState.currentQuiz.currentIndex < AppState.currentQuiz.questions.length) {
+    const quiz = AppState.currentQuiz;
+    quiz.currentIndex++;
+
+    if (quiz.currentIndex < quiz.questions.length) {
         showQuestion();
     } else {
-        if(!AppState.currentQuiz.modeInfini && AppState.currentQuiz.score >= 4) {
-            AppState.progress[AppState.currentQuiz.chapitreId] = "acquis";
+        if (!quiz.modeInfini) {
+            if (quiz.score >= 4) {
+                AppState.progress[quiz.chapitreId] = "acquis";
+            }
             localStorage.setItem("itil_progress", JSON.stringify(AppState.progress));
         }
-        alert(`Session close ! Résultats : ${AppState.currentQuiz.score}/${AppState.currentQuiz.questions.length}`);
+
+        alert(`Session terminée ! Note : ${quiz.score} / ${quiz.questions.length}`);
         document.getElementById("quiz-modal").classList.remove("active");
+        
         renderDashboardHome();
         updateGlobalProgressRing();
     }
 });
 
-function showToast(message) {
-    const toast = document.createElement("div");
-    toast.style.position = "fixed"; toast.style.bottom = "80px"; toast.style.left = "50%";
-    toast.style.transform = "translateX(-50%)"; toast.style.background = "#1e293b";
-    toast.style.color = "white"; toast.style.padding = "12px 24px"; toast.style.borderRadius = "30px";
-    toast.style.fontSize = "0.85rem"; toast.style.zIndex = "10000";
-    toast.innerText = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-}
-
 function updateGlobalProgressRing() {
     const circle = document.getElementById("global-progress-circle");
     if (!circle) return;
-    const circumference = 52 * 2 * Math.PI;
-    circle.style.strokeDasharray = `${circumference} ${circumference}`;
-    const total = Object.keys(AppState.progress).length;
-    const acquis = Object.values(AppState.progress).filter(v => v === "acquis").length;
-    const pct = total > 0 ? Math.round((acquis / total) * 100) : 0;
-    circle.style.strokeDashoffset = circumference - (pct / 100) * circumference;
-    document.getElementById("global-progress-percent").innerText = pct;
+
+    const r = 52;
+    const circonference = r * 2 * Math.PI;
+    circle.style.strokeDasharray = `${circonference} ${circonference}`;
+    
+    const totalModules = Object.keys(AppState.progress).length;
+    const modulesAcquis = Object.values(AppState.progress).filter(status => status === "acquis").length;
+    
+    const pourcentage = totalModules > 0 ? Math.round((modulesAcquis / totalModules) * 100) : 0;
+    circle.style.strokeDashoffset = circonference - (pourcentage / 100) * circonference;
+    document.getElementById("global-progress-percent").innerText = pourcentage;
 }
 
 function renderProfileUI() {
-    if (document.getElementById("display-username")) document.getElementById("display-username").innerText = AppState.profile.username;
-    if (document.getElementById("welcome-name")) document.getElementById("welcome-name").innerText = AppState.profile.username;
+    document.getElementById("display-username").innerText = AppState.profile.username;
+    document.getElementById("welcome-name").innerText = AppState.profile.username;
+    document.getElementById("display-streak").innerText = AppState.profile.streak;
 }
 
 function setupEventListeners() {
-    const toggle = () => document.body.classList.toggle("dark-mode");
-    if (document.getElementById("theme-toggle")) document.getElementById("theme-toggle").addEventListener("click", toggle);
-    if (document.getElementById("theme-toggle-mobile")) document.getElementById("theme-toggle-mobile").addEventListener("click", toggle);
-    
     const closeBtn = document.getElementById("quiz-close-btn");
     if (closeBtn) {
         closeBtn.addEventListener("click", () => {
-            document.getElementById("quiz-modal").classList.remove("active");
-            renderDashboardHome();
+            if(confirm("Quitter le test ?")) {
+                document.getElementById("quiz-modal").classList.remove("active");
+                renderDashboardHome();
+                updateGlobalProgressRing();
+            }
         });
     }
+
+    const toggleDarkMode = () => {
+        document.body.classList.toggle("dark-mode");
+        const isDark = document.body.classList.contains("dark-mode");
+        document.getElementById("theme-toggle").innerText = isDark ? "☀️" : "🌙";
+        document.getElementById("theme-toggle-mobile").innerText = isDark ? "☀️" : "🌙";
+    };
+
+    document.getElementById("theme-toggle").addEventListener("click", toggleDarkMode);
+    document.getElementById("theme-toggle-mobile").addEventListener("click", toggleDarkMode);
 }
