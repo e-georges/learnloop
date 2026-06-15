@@ -4,7 +4,7 @@ import {
     selectionnerQuestionsAdaptatives, 
     getNiveauActuel, 
     getMessageMotivation 
-} from './adaptive-engine.js';
+} from './jsadaptive-engine.js'; // Ajusté avec le nom exact de votre fichier corrigé
 
 const AppState = {
     data: null,
@@ -62,7 +62,7 @@ function buildNavigationMenu() {
     
     AppState.data.matieres.forEach(mat => {
         const li = document.createElement("li");
-        li.innerHTML = `<a class="nav-item"><span>${mat.emoji}</span><span>${mat.label}</span></a>`;
+        li.innerHTML = `<a class="nav-item" data-id="${mat.id}"><span>${mat.emoji}</span><span>${mat.label}</span></a>`;
         li.querySelector("a").addEventListener("click", (e) => {
             document.querySelectorAll(".nav-item").forEach(el => el.classList.remove("active"));
             e.currentTarget.classList.add("active");
@@ -101,9 +101,17 @@ function renderDashboardHome() {
         card.innerHTML = `
             <h3>${mat.emoji} ${mat.label}</h3>
             <p style="font-size:0.85rem; color:var(--text-secondary); margin: 8px 0 16px;">${total} module(s) d'évaluation</p>
-            <div style="background:#E2E8F0; height:6px; border-radius:3px; overflow:hidden;"><div style="background:var(--color-primary); width:${pct}%; height:100%;"></div></div>
+            <div style="background:#E2E8F0; height:6px; border-radius:3px; overflow:hidden;"><div style="background:${mat.couleur || 'var(--color-primary)'}; width:${pct}%; height:100%;"></div></div>
         `;
-        card.addEventListener("click", () => renderMatiereView(mat.id));
+        card.addEventListener("click", () => {
+            // Synchronise le menu de gauche quand on clique sur une carte de l'accueil
+            const menuLink = document.querySelector(`.nav-item[data-id="${mat.id}"]`);
+            if (menuLink) {
+                document.querySelectorAll(".nav-item").forEach(el => el.classList.remove("active"));
+                menuLink.classList.add("active");
+            }
+            renderMatiereView(mat.id);
+        });
         grid.appendChild(card);
     });
 }
@@ -120,7 +128,12 @@ function renderMatiereView(matId) {
         </div>
         <div class="chapitres-list"></div>
     `;
-    document.getElementById("back-btn").addEventListener("click", renderDashboardHome);
+    document.getElementById("back-btn").addEventListener("click", () => {
+        // Remet le bouton Accueil actif lors du retour arrière
+        document.querySelectorAll(".nav-item").forEach(el => el.classList.remove("active"));
+        document.getElementById("btn-home").classList.add("active");
+        renderDashboardHome();
+    });
 
     const list = container.querySelector(".chapitres-list");
     mat.chapitres.forEach(chapitre => {
@@ -196,9 +209,11 @@ function showQuestion() {
                 AppState.currentQuiz.score++; 
             } else { 
                 btn.style.background = "#FEE2E2"; btn.style.borderColor = "#EF4444"; btn.style.color = "#7F1D1D";
-                container.children[q.bonne_reponse].style.background = "#D1FAE5";
-                container.children[q.bonne_reponse].style.borderColor = "#10B981";
-                container.children[q.bonne_reponse].style.color = "#064E3B";
+                if(container.children[q.bonne_reponse]) {
+                    container.children[q.bonne_reponse].style.background = "#D1FAE5";
+                    container.children[q.bonne_reponse].style.borderColor = "#10B981";
+                    container.children[q.bonne_reponse].style.color = "#064E3B";
+                }
             }
             
             if(!AppState.currentQuiz.modeInfini) {
@@ -220,8 +235,12 @@ document.getElementById("quiz-next-btn").addEventListener("click", () => {
     if (AppState.currentQuiz.currentIndex < AppState.currentQuiz.questions.length) {
         showQuestion();
     } else {
-        if(!AppState.currentQuiz.modeInfini && AppState.currentQuiz.score >= 4) {
-            AppState.progress[AppState.currentQuiz.chapitreId] = "acquis";
+        if(!AppState.currentQuiz.modeInfini) {
+            if(AppState.currentQuiz.score >= 4) {
+                AppState.progress[AppState.currentQuiz.chapitreId] = "acquis";
+            } else {
+                AppState.progress[AppState.currentQuiz.chapitreId] = "a_reviser";
+            }
             localStorage.setItem("itil_progress", JSON.stringify(AppState.progress));
         }
         alert(`Session close ! Résultats : ${AppState.currentQuiz.score}/${AppState.currentQuiz.questions.length}`);
@@ -267,8 +286,10 @@ function setupEventListeners() {
     const closeBtn = document.getElementById("quiz-close-btn");
     if (closeBtn) {
         closeBtn.addEventListener("click", () => {
-            document.getElementById("quiz-modal").classList.remove("active");
-            renderDashboardHome();
+            if(confirm("Voulez-vous vraiment quitter ce test en cours ?")) {
+                document.getElementById("quiz-modal").classList.remove("active");
+                renderDashboardHome();
+            }
         });
     }
 }
