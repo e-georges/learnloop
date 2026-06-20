@@ -1138,9 +1138,13 @@
         {
           "id": "re3",
           "label": "Esprit critique, médias et information"
+        },
+        {
+          "id": "re4",
+          "label": "La sensibilité : soi et les autres (respect d'autrui, harcèlement, empathie)"
         }
       ],
-      "note_module": "Sous-épreuve distincte au DNB 2026 (coefficient 0,5, notée sur 20, intégrée à l'épreuve d'Histoire-Géographie-EMC de 2h). Format réel : corpus de documents + série de questions + courte rédaction d'une dizaine de lignes. Thématique annuelle 2026 : 's'engager et débattre en démocratie'.",
+      "note_module": "Sous-épreuve distincte au DNB 2026 (coefficient 0,5, notée sur 20, intégrée à l'épreuve d'Histoire-Géographie-EMC de 2h). Format réel : corpus de documents + série de questions + courte rédaction d'une dizaine de lignes. Thématique annuelle 2026 : 's'engager et débattre en démocratie'. Le référentiel ci-dessus suit les 4 dimensions officielles du programme cycle 4 (sensibilité, droit et règle, jugement, engagement) telles que définies au BO n°30 du 26-07-2018 — et non une liste raccourcie inventée pour l'app.",
       "chapitres": [
         {
           "id": "e1",
@@ -1254,6 +1258,63 @@
               ],
               "bonne_reponse": 1,
               "explication": "Vérifier la source et croiser les informations est la base de l'esprit critique face à la désinformation."
+            }
+          ]
+        },
+        {
+          "id": "e3",
+          "titre": "La sensibilité : respect d'autrui et lutte contre le harcèlement",
+          "theme": "EMC",
+          "couvre": [
+            "re4"
+          ],
+          "cours": "La dimension de la « sensibilité » porte sur la relation à soi et aux autres : identifier et réguler ses émotions, respecter autrui, accepter les différences. Le harcèlement scolaire se définit par trois critères cumulatifs : une violence (verbale, physique ou psychologique), répétée dans le temps, qui isole la victime. Le cyberharcèlement prolonge ce phénomène en dehors de l'école, via les réseaux sociaux.",
+          "piege": "Confondre un conflit ponctuel entre élèves (dispute isolée, sans répétition) et une situation de harcèlement, qui suppose une répétition organisée et un rapport de force déséquilibré.",
+          "exercice_ouvert": {
+            "enonce": "Rédige un texte d'une dizaine de lignes expliquant les trois critères qui définissent une situation de harcèlement scolaire, et précise au moins une conduite à tenir si l'on est témoin d'une telle situation.",
+            "criteres": [
+              "J'ai cité les trois critères : violence, répétition, isolement de la victime.",
+              "J'ai distingué le harcèlement d'un simple conflit ponctuel.",
+              "J'ai mentionné une conduite à tenir pour un témoin (en parler à un adulte de confiance, ne pas rester spectateur passif).",
+              "Mon texte fait une dizaine de lignes et reste correctement structuré."
+            ]
+          },
+          "questions": [
+            {
+              "niveau": 1,
+              "enonce": "Quels sont les trois critères qui définissent une situation de harcèlement scolaire ?",
+              "options": [
+                "Violence, répétition, isolement de la victime",
+                "Tristesse, isolement, mauvaises notes",
+                "Conflit, dispute, réconciliation",
+                "Violence, ponctualité, accord mutuel"
+              ],
+              "bonne_reponse": 0,
+              "explication": "Le harcèlement se caractérise par une violence répétée qui isole la victime — un conflit isolé n'en fait pas partie."
+            },
+            {
+              "niveau": 2,
+              "enonce": "Que désigne le terme 'cyberharcèlement' ?",
+              "options": [
+                "Un piratage informatique",
+                "Un harcèlement prolongé via les réseaux sociaux ou messageries",
+                "Un jeu vidéo violent",
+                "Une cyberattaque contre une entreprise"
+              ],
+              "bonne_reponse": 1,
+              "explication": "Le cyberharcèlement étend le harcèlement scolaire en dehors de l'établissement, via le numérique."
+            },
+            {
+              "niveau": 3,
+              "enonce": "Si tu es témoin d'une situation de harcèlement, quelle est l'attitude civique recommandée ?",
+              "options": [
+                "Ne rien faire pour ne pas être visé à son tour",
+                "En parler à un adulte de confiance (enseignant, parent, CPE)",
+                "Filmer la scène pour la partager",
+                "Attendre que la victime se défende seule"
+              ],
+              "bonne_reponse": 1,
+              "explication": "Rompre l'isolement de la victime en alertant un adulte est la conduite responsable attendue d'un témoin."
             }
           ]
         }
