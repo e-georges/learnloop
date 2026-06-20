@@ -275,6 +275,18 @@ function analyserLacunes() {
   }
 }
 
+// Statut personnel de maîtrise d'un thème (boîte de Leitner). Volontairement codé par
+// FORME d'icône (et non par couleur rouge/vert/orange) pour ne jamais se confondre
+// visuellement avec les barres de "Couverture du programme", qui elles sont éditoriales
+// et utilisent le code couleur succès/alerte/danger.
+function statutMaitrise(theme) {
+  const e = AppState.leitner[theme];
+  if (!e) return { icone: '⚪', label: 'Pas encore testé' };
+  if (e.nextReview <= Date.now()) return { icone: '🔄', label: 'À revoir aujourd\'hui' };
+  if (e.box >= 4) return { icone: '✅', label: 'Maîtrisé (révision dans plusieurs jours)' };
+  return { icone: '📝', label: 'En cours d\'apprentissage' };
+}
+
 // ==========================================================================
 // 📊 TABLEAU DE BORD « COUVERTURE DU PROGRAMME » — indicateur honnête, calculé
 // ==========================================================================
@@ -331,6 +343,7 @@ function construireDashboardCouverture() {
   });
 
   html += `<p style="margin:14px 0 0 0; font-size:0.7rem; color:var(--text-secondary); line-height:1.4;">Un sous-thème officiel n'est compté « couvert » que s'il existe au moins un chapitre dédié dans l'app — pas de promesse de programme complet.</p>`;
+  html += `<p style="margin:8px 0 0 0; padding-top:10px; border-top:1px dashed var(--border-color); font-size:0.7rem; color:var(--text-secondary); line-height:1.6;">📚 Barres = contenu disponible dans l'appli (fixe). &nbsp;•&nbsp; ⚪🔄📝✅ sur chaque chapitre = <b>ton</b> niveau personnel, mesuré par tes quiz (évolue).</p>`;
 
   container.innerHTML = html;
 }
@@ -378,6 +391,8 @@ function construireMenuMatieres() {
 
   const dataToUse = AppState.data || DATA_SECOURS;
   const groupes = {};
+  const couvertureParId = {};
+  calculerCouverture().detail.forEach(d => { couvertureParId[d.id] = d; });
 
   dataToUse.matieres.forEach(m => {
     const cat = m.categorie || "Enseignement Général";
@@ -403,10 +418,23 @@ function construireMenuMatieres() {
       const defaultIcon = `<svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
       const svgIcon = SVGMappings[m.id] || defaultIcon;
 
+      const cov = couvertureParId[m.id];
+      const covBar = (cov && cov.total > 0) ? `
+        <div style="margin-top:8px;">
+          <div style="width:100%; height:4px; background:var(--border-color); border-radius:2px; overflow:hidden;">
+            <div style="width:${cov.pct}%; height:100%; background:${couleurCouverture(cov.pct)};"></div>
+          </div>
+          <span style="font-size:0.62rem; font-weight:700; color:${couleurCouverture(cov.pct)}; text-transform:uppercase; letter-spacing:0.03em;">📚 Programme : ${cov.pct}% (${cov.nbCouverts}/${cov.total})</span>
+        </div>
+      ` : '';
+
       header.innerHTML = `
-        <div style="display:flex; align-items:center; gap:12px;">
-          <div class="header-icon-box">${svgIcon}</div>
-          <h3 style="margin:0; font-size:1rem; font-weight:700; color:var(--text-primary); letter-spacing:-0.01em;">${m.label || m.id}</h3>
+        <div style="display:flex; flex-direction:column; gap:0; flex:1; min-width:0;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div class="header-icon-box">${svgIcon}</div>
+            <h3 style="margin:0; font-size:1rem; font-weight:700; color:var(--text-primary); letter-spacing:-0.01em;">${m.label || m.id}</h3>
+          </div>
+          ${covBar}
         </div>
         <svg class="arrow-indicator" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
       `;
@@ -419,8 +447,12 @@ function construireMenuMatieres() {
         row.className = 'chapitre-item';
         row.style.cssText = "padding:16px 14px; margin-top:12px; background:var(--bg-card); border-radius:12px; display:flex; justify-content:space-between; align-items:center; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color);";
         row.onclick = (e) => ouvrirPreQuiz(m.id, c.id, e);
+        const statut = statutMaitrise(c.theme || c.id);
         row.innerHTML = `
-          <span style="font-weight:600; font-size:.88rem; padding-right:12px; text-align:left; color:var(--text-primary); line-height:1.4;">${c.titre}</span>
+          <span style="display:flex; align-items:center; gap:8px; font-weight:600; font-size:.88rem; padding-right:12px; text-align:left; color:var(--text-primary); line-height:1.4;">
+            <span title="${statut.label}" style="font-size:0.85rem; flex-shrink:0;">${statut.icone}</span>
+            ${c.titre}
+          </span>
           <span style="font-size:.68rem; font-weight:700; color:var(--color-primary); background:#EEF2FF; padding:5px 10px; border-radius:8px; white-space:nowrap; text-transform:uppercase; letter-spacing:0.03em;">${c.theme || 'DNB'}</span>
         `;
         bodyContent.appendChild(row);
@@ -502,6 +534,7 @@ function goHome() {
   oralTimerInterval = null;
   activerNav('nav-home');
   construireDashboardCouverture();
+  construireMenuMatieres();
 }
 
 function lancerQuiz(niveau) {
